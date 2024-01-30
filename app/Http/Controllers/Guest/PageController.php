@@ -11,8 +11,9 @@ class PageController extends Controller
 {
     public function index()
     {
+        $currentDate = Carbon::now()->format('Y-m-d');
 
-        $trains = Train::all();
+        $trains = Train::all()->where('departure_date', $currentDate);
 
         return view('welcome', compact('trains'));
     }
