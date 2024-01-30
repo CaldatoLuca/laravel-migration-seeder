@@ -1,41 +1,105 @@
-# Laravel Template
+# Laravel Migration e Seeder
 
-## Creazione
+Creazione di una tabella trains e relativa Migration
 
--   installazione di npm (`npm install`)
+## Migration
 
--   installazione di SASS (`npm i --save-dev sass`)
+Dopo aver creato la struttura di base vista negli scorsi giorni (Model, Controller e db su PhpMyAdmin) creo la tabella 'trains' tramite migration.
 
--   rinomino i file correttamente (da css a sass) anche in vite.config.js (dove creo anche un alias)
+Per creare il file eseguo `php artisan make:migration create_trains_table` dove trains si riferirà, per naming convenction, al model 'Train'.
 
--   importo il file scss nel progetto (`import "~resources/scss/app.scss";`) in app.js
+All' interno di `Schema::create` vado a inserire le colonne della tabella e eseguo la migrazione tramite `php artisan migrate` per creare la tabella nel db.
 
--   includo nell' head il file app.js (`@vite('resources/js/app.js')`)
+```php
+    public function up(): void
+    {
+        Schema::create('trains', function (Blueprint $table) {
+            //id autogenerato
+            $table->id();
 
--   indichiamo dove prendere le img (`import.meta.glob(["../img/**"]);`) in app.js
+            //campi inseriti manualmente
+            $table->string('company', 30);
+            $table->string('departure_station', 20);
+            $table->string('arrival_station', 20);
+            $table->time('departure_time', 4);
+            $table->time('arrival_time', 4);
+            $table->string('train_id', 50);
+            $table->tinyInteger('number_of_carriages')->unsigned()->nullable();
+            $table->boolean('on_time', 50);
+            $table->boolean('cancelled', 50);
 
--   nel template si vede come usare le img in html e scss
+            //tempo e data di creazione
+            $table->timestamps();
+        });
+    }
+```
 
--   installo Bootstrap (`npm i --save bootstrap @popperjs/core`)
+Come già visto è necessarrio specificare il tipo di dato e le sue prorpietà, seguendo la scrittura di Laravel ('string' equivale a 'varchar')
 
--   aggiungo la costante path (`import path from "path";`) in vite.config.js
+Per ogni `function() up` si ha una funzione contrapposta che esegue il codice antagonista `function down()`
 
--   do un alias a bootsrap (`"~bootstrap": path.resolve(__dirname, "node_modules/bootstrap"),`)
+```php
+    public function down(): void
+    {
+        Schema::dropIfExists('trains');
+    }
+```
 
--   importo il css di Bootstrap (`@import "~bootstrap/scss/bootstrap";`) in app.scss
+In questo caso elimina la tabella trains (eseguendo il comando `php artisan migrate:rollup`)
 
--   importo il js di Bootsrap (`import * as bootstrap from "bootstrap";`) in app.js
+### Migration update
 
-## Utilizzo
+Se è necessario aggiornare la tabella per aggiungere o modificare un dato si fa un update.
 
--   usare questo template in fase di creazione di una nuova repository
+Si lancia il codice `php artisan make:migration update_trains_table --table=trains` che andrà a creare un nuovo file con struttura simile alla migrazione principale.
 
--   clonare il progetto (`git clone ...`)
+```php
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        Schema::table('trains', function (Blueprint $table) {
+            $table->date('departure_date')->after('arrival_station');
+            $table->date('arrival_date')->after('departure_date');
+        });
+    }
 
--   runnare il comando `composer install`
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        Schema::table('trains', function (Blueprint $table) {
+            $table->dropColumn('departure_date');
+            $table->dropColumn('arrival_date');
+        });
+    }
+};
+```
 
--   copiare il file '.env.example' e creare un file uguale '.env'
+Anche qui compaiono le funzioni `up()` e `down()`.
 
--   generare 'app key' via bottone o tramite `php artisan key:generate`
+Successivamente nel controller sarà possibile raccogliere i dati desiderati e visualizzarli in pagina.
 
--   runnare su un altro terminale `npm install`
+NB
+
+I dati sono stati inseriti a mano tramite 'PhpMyAdmin'
+
+Per visualizzare i treni con partenza odierna ho usato la classe `Carbon` di Laravel ottenendo la data corrente e usandola per filtrare i dati
+
+```php
+class PageController extends Controller
+{
+    public function index()
+    {
+        $currentDate = Carbon::now()->format('Y-m-d');
+
+        $trains = Train::all()->where('departure_date', $currentDate);
+
+        return view('welcome', compact('trains'));
+    }
+}
+```
